@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 
 encode = True
@@ -11,6 +12,7 @@ encode = True
 #    val = input("> ")
 
 val = sys.argv[1]
+VERBOSE = True
 
 class Encoder5Bit:
     # These are hard-coded conversion tables
@@ -67,6 +69,7 @@ class Encoder5Bit:
         "Y": "11000",
         "Z": "11001",
         " ": "11010",
+        "<stop>":    "11011",
         "<back>":    "11110",
         "<forward>": "11111"
     },
@@ -104,6 +107,39 @@ class Encoder5Bit:
         "<forward>": "11111"
     },
     {
+        "0": "00000",
+        "1": "00001",
+        "2": "00010",
+        "3": "00011",
+        "4": "00100",
+        "5": "00101",
+        "6": "00110",
+        "7": "00111",
+        "8": "01000",
+        "9": "01001",
+        " ": "01010",
+        "+": "01011",
+        "-": "01100",
+        "*": "01101",
+        "(": "01110",
+        ")": "01111",
+        "_": "10000",
+        "=": "10001",
+        "/": "10010",
+        "": "10011",
+        "": "10100",
+        "": "10101",
+        "": "10110",
+        "": "10111",
+        "": "11000",
+        "": "11001",
+        "": "11010",
+        "": "11011",
+        "": "11100",
+        "<back>":    "11110",
+        "<forward>": "11111"
+    },
+    {
         "~": "00000",
         "`": "00001",
         "!": "00010",
@@ -114,13 +150,13 @@ class Encoder5Bit:
         "%": "00111",
         "^": "01000",
         "&": "01001",
-        "*": "01010",
-        "(": "01011",
-        ")": "01100",
-        "_": "01101",
-        "-": "01110",
-        "+": "01111",
-        "=": "10000",
+        "": "01010",
+        "": "01011",
+        "": "01100",
+        "": "01101",
+        "": "01110",
+        "": "01111",
+        "": "10000",
         "[": "10001",
         "]": "10010",
         "{": "10011",
@@ -133,7 +169,7 @@ class Encoder5Bit:
         "<": "11010",
         ">": "11011",
         "?": "11100",
-        "/": "11101",
+        " ": "11101",
         "<back>":    "11110",
         "<forward>": "11111"
         
@@ -141,7 +177,7 @@ class Encoder5Bit:
 
     b = [""]
     mode_flip = []
-
+    hex_flip = {}
     def __init__(self):
         # This creates a table of int -> binary
         # for ints 0-63
@@ -152,6 +188,8 @@ class Encoder5Bit:
         # to do binary -> char mapping
         for i in range(len(self.mode)):
             self.mode_flip.append({self.mode[i][k] : k for k in self.mode[i]})
+
+        self.hex_flip = { self.hex_table[i] : i for i in self.hex_table }
     # Maps a char to a code-point
     # with possible mode-switch code-points
     def encode_char(self, c, state):
@@ -172,22 +210,30 @@ class Encoder5Bit:
         for c in s:
             h += self.hex_table[c]
         s = h
-        # Reads the number of code-points
-        # stored in this string
-        m = (int(s[2:8], 2))
-        # Extract the code points from the
-        # string
-        s = s[8:8 + m*5] 
+
+        if len(s) % 5 != 0:
+            s = s[:(len(s) - (len(s) % 5))]
+        # Not going to store length anymore
+        ## Reads the number of code-points
+        ## stored in this string
+        #m = (int(s[2:8], 2))
+        ## Extract the code points from the
+        ## string
+        #s = s[8:8 + m*5] 
         lgth = len(s)
 
         # Runs though the string, switching modes
         # and extracting code-points as necessary
         for i in range(0, lgth, 5):
             c = self.mode_flip[state.current_mode][s[i:i+5]]
+            if VERBOSE:
+                print("Code Point: " + c)
             if c == "<forward>":
                 state.inc_mode()
             elif c == "<back>":
                 state.dec_mode()
+            elif c == "<stop>":
+                break
             else:
                 dec += c
         return dec
@@ -196,19 +242,37 @@ class Encoder5Bit:
     # one or more code-points and prepends the
     # length
     def encode_str(self, s):
-        enc = ""
+        enc = []
         state = EncoderState()
+
         for c in s:
-            enc += self.encode_char(c, state)
+            enc.append(self.encode_char(c, state))
+        enc.append(self.encode_char('<stop>', state))
+        # Not going to store length anymore
+        #enc_len = int(len(enc) / 5)
+        #enc = "11" + self.b[enc_len] + enc
 
-        enc_len = int(len(enc) / 5)
-        enc = "11" + self.b[enc_len] + enc
+        one_back = len(self.mode) - 1
 
-        while len(enc) % 8 != 0:
+        fwd_cp = 0
+        i = 0
+        while i < len(enc):
+            if enc[i].startswith('11111'*one_back):
+               enc[i] = '11110' + enc[i][(5*(one_back)):]
+            i += 1
+
+
+        enc = "".join(enc)
+        while len(enc) % 4 != 0:
             enc += '0'
-        enc = ("%X" % int(enc, 2))
 
-        return enc
+
+
+        h = ""
+        for i in range(0, len(enc), 4):
+            h += self.hex_flip[enc[i:i+4]]
+
+        return h
 
 class EncoderState:
     current_mode = 0
