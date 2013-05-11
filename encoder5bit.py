@@ -13,6 +13,9 @@ encode = True
 val = sys.argv[1]
 
 class Encoder5Bit:
+    # These are hard-coded conversion tables
+
+    # hex-char -> bin
     hex_table = {
         "0": "0000",
         "1": "0001",
@@ -31,6 +34,11 @@ class Encoder5Bit:
         "E": "1110",
         "F": "1111",
     }
+
+    # These are the mappings for
+    # the different modes to code-points. 
+    # Each mode needs to have a <forward>
+    # and <back> entries
     mode = [ {
         "A": "00000",
         "B": "00001",
@@ -135,11 +143,17 @@ class Encoder5Bit:
     mode_flip = []
 
     def __init__(self):
+        # This creates a table of int -> binary
+        # for ints 0-63
         for k in range(6):
             self.b = [i+j for i in ['0','1'] for j in self.b]
 
+        # Flips the mode mappings
+        # to do binary -> char mapping
         for i in range(len(self.mode)):
             self.mode_flip.append({self.mode[i][k] : k for k in self.mode[i]})
+    # Maps a char to a code-point
+    # with possible mode-switch code-points
     def encode_char(self, c, state):
         if c in self.mode[state.current_mode]:
             return self.mode[state.current_mode][c]
@@ -158,9 +172,16 @@ class Encoder5Bit:
         for c in s:
             h += self.hex_table[c]
         s = h
+        # Reads the number of code-points
+        # stored in this string
         m = (int(s[2:8], 2))
+        # Extract the code points from the
+        # string
         s = s[8:8 + m*5] 
         lgth = len(s)
+
+        # Runs though the string, switching modes
+        # and extracting code-points as necessary
         for i in range(0, lgth, 5):
             c = self.mode_flip[state.current_mode][s[i:i+5]]
             if c == "<forward>":
@@ -171,6 +192,9 @@ class Encoder5Bit:
                 dec += c
         return dec
         
+    # Takes a string, converts each character to
+    # one or more code-points and prepends the
+    # length
     def encode_str(self, s):
         enc = ""
         state = EncoderState()
