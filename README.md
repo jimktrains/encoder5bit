@@ -6,3 +6,11 @@ To run an example
 
     python3 encoder5bit.py "This is a test?"
 
+Output:
+
+    Orig. String:   This is a test?
+    Orig. Length:   15
+    Encoded String: D19FCE896912D035324A7FE0
+    Encoded length: 12
+    Decoded String: This is a test?
+
