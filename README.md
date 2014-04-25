@@ -2,7 +2,7 @@ This encoder turns a string of the most common ascii characters and turns it int
 
 To run an example
 
-    python3 encoder5bit.py "This is a test?"
+    python3 encoder5bit.py "This is a test!"
 
 Output:
 
